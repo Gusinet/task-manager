@@ -1,4 +1,5 @@
 import express from "express";
+import { auth } from "../middleware/auth.js"
 import { User } from "../models/user.js";
 export const userRouter = new express.Router();
 
@@ -7,29 +8,30 @@ userRouter.post("/users", async (req, res) => {
 
   try {
     await user.save();
-    res.status(201).send(user);
+
+    const token = await user.generateAuthToken();
+
+    res.status(201).send({ user, token });
   } catch (e) {
     res.status(400).send(e);
   }
 });
 
-
-userRouter.post('/users/login', async (req, res) => {
-  try{
-    const user = await User.findByCredentials(req.body.email, req.body.password)
-    res.send(user)
-  }catch(e){
-    res.status(400).send()
-  }
-})
-
-userRouter.get("/users", async (req, res) => {
+userRouter.post("/users/login", async (req, res) => {
   try {
-    const users = await User.find({});
-    res.send(users);
+    const user = await User.findByCredentials(
+      req.body.email,
+      req.body.password
+    );
+    const token = await user.generateAuthToken();
+    res.send({ user, token });
   } catch (e) {
-    res.status(500).send();
+    res.status(400).send();
   }
+});
+
+userRouter.get("/users/me", auth, async (req, res) => {
+    res.send(req.user)
 });
 
 userRouter.get("/users/:id", async (req, res) => {
